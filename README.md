@@ -72,9 +72,53 @@ tribe_backend/
 
 - Python 3.11+
 - PostgreSQL 15+
-- Redis
+- Redis (optional for basic operation)
 
-### Option 1: Docker (Recommended)
+### Option 1: Automated Script (Recommended for Local Development)
+
+The project includes robust run scripts that handle everything automatically:
+
+**Linux/macOS:**
+```bash
+# Using Python script (most robust)
+python3 run.py
+
+# Or using shell script
+./run.sh
+
+# Or using Make
+make dev
+```
+
+**Windows:**
+```bash
+# Using Python script
+python run.py
+
+# Or using batch script
+run.bat
+```
+
+**Script Features:**
+- ✅ Automatic virtual environment setup
+- ✅ Dependency installation
+- ✅ Environment file creation from template
+- ✅ Database connection checks
+- ✅ Redis connection checks
+- ✅ Database migration management
+- ✅ Colored output and error handling
+- ✅ Graceful shutdown on Ctrl+C
+
+**Script Options:**
+```bash
+python3 run.py --help
+python3 run.py --host 127.0.0.1 --port 8000
+python3 run.py --no-reload  # Disable auto-reload
+python3 run.py --skip-checks  # Skip pre-flight checks
+python3 run.py --skip-migrations  # Skip database migrations
+```
+
+### Option 2: Docker (Recommended for Production-like Environment)
 
 ```bash
 # Clone the repository
@@ -86,9 +130,15 @@ docker-compose up -d
 
 # The API will be available at http://localhost:8000
 # API docs at http://localhost:8000/docs
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
 ```
 
-### Option 2: Local Development
+### Option 3: Manual Setup
 
 ```bash
 # Create virtual environment
@@ -283,6 +333,61 @@ The application is designed to work with:
 - **ElastiCache** for Redis
 - **S3 + CloudFront** for media storage
 - **SQS** or Redis for Celery message broker
+
+## 🛠️ Development Scripts
+
+### Run Scripts
+
+The project includes multiple ways to run the development server:
+
+1. **`run.py`** - Python script with full error handling (cross-platform)
+2. **`run.sh`** - Bash script for Linux/macOS
+3. **`run.bat`** - Batch script for Windows
+4. **`Makefile`** - Make commands for common tasks
+
+### Make Commands
+
+```bash
+make help          # Show all available commands
+make install       # Install dependencies
+make dev           # Run with auto-reload
+make run           # Run without auto-reload
+make test          # Run tests
+make clean         # Clean Python cache files
+make migrate       # Run database migrations
+make docker-up     # Start Docker services
+make docker-down   # Stop Docker services
+```
+
+### Troubleshooting
+
+**Database Connection Issues:**
+- Ensure PostgreSQL is running: `pg_isready` or `psql -U postgres`
+- Check DATABASE_URL in `.env` file
+- Verify database exists: `createdb tribe_db`
+
+**Redis Connection Issues:**
+- Redis is optional for basic operation
+- Ensure Redis is running: `redis-cli ping`
+- Check REDIS_URL in `.env` file
+
+**Port Already in Use:**
+```bash
+# Use a different port
+python3 run.py --port 8001
+
+# Or find and kill the process using port 8000
+lsof -ti:8000 | xargs kill  # macOS/Linux
+```
+
+**Virtual Environment Issues:**
+```bash
+# Remove and recreate venv
+rm -rf venv
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
 ## 📄 License
 
