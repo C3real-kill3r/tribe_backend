@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING, List
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, relationship
 
-from app.models.base import BaseModel, UUIDMixin
+from app.models.base import BaseModel, TimestampMixin, UUIDMixin
 from app.db.session import Base
 
 if TYPE_CHECKING:
@@ -40,13 +40,13 @@ class Tribe(BaseModel):
     )
     
     # Relationships
-    creator: "User" = relationship("User", foreign_keys=[created_by])
-    members: List["TribeMember"] = relationship(
+    creator: Mapped["User"] = relationship("User", foreign_keys=[created_by])
+    members: Mapped[List["TribeMember"]] = relationship(
         "TribeMember",
         back_populates="tribe",
         cascade="all, delete-orphan"
     )
-    invitations: List["TribeInvitation"] = relationship(
+    invitations: Mapped[List["TribeInvitation"]] = relationship(
         "TribeInvitation",
         back_populates="tribe",
         cascade="all, delete-orphan"
@@ -79,8 +79,8 @@ class TribeMember(Base, UUIDMixin):
     left_at = Column(DateTime(timezone=True), nullable=True)
     
     # Relationships
-    tribe: "Tribe" = relationship("Tribe", back_populates="members")
-    user: "User" = relationship("User")
+    tribe: Mapped["Tribe"] = relationship("Tribe", back_populates="members")
+    user: Mapped["User"] = relationship("User")
     
     def __repr__(self) -> str:
         return f"<TribeMember {self.user_id} in {self.tribe_id}>"
@@ -113,9 +113,9 @@ class TribeInvitation(Base, UUIDMixin, TimestampMixin):
     responded_at = Column(DateTime(timezone=True), nullable=True)
     
     # Relationships
-    tribe: "Tribe" = relationship("Tribe", back_populates="invitations")
-    inviter: "User" = relationship("User", foreign_keys=[inviter_id])
-    invitee: "User" = relationship("User", foreign_keys=[invitee_id])
+    tribe: Mapped["Tribe"] = relationship("Tribe", back_populates="invitations")
+    inviter: Mapped["User"] = relationship("User", foreign_keys=[inviter_id])
+    invitee: Mapped["User"] = relationship("User", foreign_keys=[invitee_id])
     
     def __repr__(self) -> str:
         return f"<TribeInvitation {self.id}>"

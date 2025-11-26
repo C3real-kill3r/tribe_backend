@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, relationship
 
 from app.models.base import TimestampMixin, UUIDMixin
 from app.db.session import Base
@@ -50,7 +50,7 @@ class UserSettings(Base, UUIDMixin, TimestampMixin):
     font_size_multiplier = Column(Numeric(3, 2), default=1.0, nullable=False)
     
     # Relationships
-    user: "User" = relationship("User")
+    user: Mapped["User"] = relationship("User")
     
     def __repr__(self) -> str:
         return f"<UserSettings for {self.user_id}>"
@@ -76,8 +76,8 @@ class BlockedUser(Base, UUIDMixin):
     blocked_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     
     # Relationships
-    blocker: "User" = relationship("User", foreign_keys=[blocker_id])
-    blocked: "User" = relationship("User", foreign_keys=[blocked_id])
+    blocker: Mapped["User"] = relationship("User", foreign_keys=[blocker_id])
+    blocked: Mapped["User"] = relationship("User", foreign_keys=[blocked_id])
     
     def __repr__(self) -> str:
         return f"<BlockedUser {self.blocker_id} blocked {self.blocked_id}>"

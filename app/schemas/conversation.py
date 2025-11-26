@@ -93,7 +93,7 @@ class ReadReceipt(TribeBaseModel):
     read_at: datetime
 
 
-class MessageResponse(TribeBaseModel, TimeAgoMixin):
+class MessageResponse(TimeAgoMixin):  # TimeAgoMixin already inherits from TribeBaseModel
     """Message response schema."""
     
     id: UUID

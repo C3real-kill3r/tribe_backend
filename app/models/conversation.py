@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, relationship
 
 from app.models.base import BaseModel, TimestampMixin, UUIDMixin
 from app.db.session import Base
@@ -34,17 +34,17 @@ class Conversation(BaseModel):
     last_message_at = Column(DateTime(timezone=True), nullable=True, index=True)
     
     # Relationships
-    participants: List["ConversationParticipant"] = relationship(
+    participants: Mapped[List["ConversationParticipant"]] = relationship(
         "ConversationParticipant",
         back_populates="conversation",
         cascade="all, delete-orphan"
     )
-    messages: List["Message"] = relationship(
+    messages: Mapped[List["Message"]] = relationship(
         "Message",
         back_populates="conversation",
         cascade="all, delete-orphan"
     )
-    ai_coach_session: Optional["AICoachSession"] = relationship(
+    ai_coach_session: Mapped[Optional["AICoachSession"]] = relationship(
         "AICoachSession",
         back_populates="conversation",
         uselist=False
@@ -85,8 +85,8 @@ class ConversationParticipant(Base, UUIDMixin):
     left_at = Column(DateTime(timezone=True), nullable=True)
     
     # Relationships
-    conversation: "Conversation" = relationship("Conversation", back_populates="participants")
-    user: "User" = relationship("User")
+    conversation: Mapped["Conversation"] = relationship("Conversation", back_populates="participants")
+    user: Mapped["User"] = relationship("User")
     
     def __repr__(self) -> str:
         return f"<ConversationParticipant {self.user_id} in {self.conversation_id}>"
@@ -123,7 +123,7 @@ class Message(BaseModel):
     media_thumbnail_url = Column(Text, nullable=True)
     
     # Special messages
-    metadata = Column(JSONB, nullable=True)  # For system messages, goal updates, etc.
+    message_metadata = Column(JSONB, nullable=True)  # For system messages, goal updates, etc. (renamed from metadata - reserved name)
     
     # Reply/Thread
     reply_to_message_id = Column(
@@ -137,14 +137,14 @@ class Message(BaseModel):
     is_deleted = Column(Boolean, default=False, nullable=False)
     
     # Relationships
-    conversation: "Conversation" = relationship("Conversation", back_populates="messages")
-    sender: Optional["User"] = relationship("User")
-    reply_to: Optional["Message"] = relationship(
+    conversation: Mapped["Conversation"] = relationship("Conversation", back_populates="messages")
+    sender: Mapped[Optional["User"]] = relationship("User")
+    reply_to: Mapped[Optional["Message"]] = relationship(
         "Message",
         remote_side="Message.id",
         backref="replies"
     )
-    reads: List["MessageRead"] = relationship(
+    reads: Mapped[List["MessageRead"]] = relationship(
         "MessageRead",
         back_populates="message",
         cascade="all, delete-orphan"
@@ -174,8 +174,8 @@ class MessageRead(Base, UUIDMixin):
     read_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     
     # Relationships
-    message: "Message" = relationship("Message", back_populates="reads")
-    user: "User" = relationship("User")
+    message: Mapped["Message"] = relationship("Message", back_populates="reads")
+    user: Mapped["User"] = relationship("User")
     
     def __repr__(self) -> str:
         return f"<MessageRead {self.message_id} by {self.user_id}>"
@@ -211,8 +211,8 @@ class AICoachSession(Base, UUIDMixin, TimestampMixin):
     last_interaction_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     
     # Relationships
-    user: "User" = relationship("User")
-    conversation: "Conversation" = relationship("Conversation", back_populates="ai_coach_session")
+    user: Mapped["User"] = relationship("User")
+    conversation: Mapped["Conversation"] = relationship("Conversation", back_populates="ai_coach_session")
     
     def __repr__(self) -> str:
         return f"<AICoachSession {self.id}>"

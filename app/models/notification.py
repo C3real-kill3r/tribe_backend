@@ -2,11 +2,11 @@
 Notification and push notification models.
 """
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, relationship
 
 from app.models.base import BaseModel, TimestampMixin, UUIDMixin
 from app.db.session import Base
@@ -71,8 +71,8 @@ class Notification(BaseModel):
     push_sent_at = Column(DateTime(timezone=True), nullable=True)
     
     # Relationships
-    user: "User" = relationship("User", foreign_keys=[user_id])
-    related_user: "User" = relationship("User", foreign_keys=[related_user_id])
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
+    related_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[related_user_id])
     
     def __repr__(self) -> str:
         return f"<Notification {self.id}>"
@@ -106,7 +106,7 @@ class NotificationPreference(Base, UUIDMixin, TimestampMixin):
     goal_updates = Column(Boolean, default=True, nullable=False)
     
     # Relationships
-    user: "User" = relationship("User")
+    user: Mapped["User"] = relationship("User")
     
     def __repr__(self) -> str:
         return f"<NotificationPreference for {self.user_id}>"
@@ -129,7 +129,7 @@ class PushToken(Base, UUIDMixin, TimestampMixin):
     is_active = Column(Boolean, default=True, nullable=False)
     
     # Relationships
-    user: "User" = relationship("User")
+    user: Mapped["User"] = relationship("User")
     
     def __repr__(self) -> str:
         return f"<PushToken {self.id}>"

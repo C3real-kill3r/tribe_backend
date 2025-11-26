@@ -11,7 +11,7 @@ from app.schemas.common import TribeBaseModel, PaginationMeta, TimeAgoMixin
 from app.schemas.user import UserPublicResponse
 
 
-class NotificationResponse(TribeBaseModel, TimeAgoMixin):
+class NotificationResponse(TimeAgoMixin):  # TimeAgoMixin already inherits from TribeBaseModel
     """Notification response schema."""
     
     id: UUID

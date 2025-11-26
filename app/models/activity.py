@@ -2,11 +2,11 @@
 Activity, achievement, and feed models.
 """
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import INET, JSONB, UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, relationship
 
 from app.models.base import BaseModel, TimestampMixin, UUIDMixin
 from app.db.session import Base
@@ -28,12 +28,12 @@ class UserActivity(Base, UUIDMixin, TimestampMixin):
     )
     activity_type = Column(String(50), nullable=False, index=True)
     description = Column(Text, nullable=True)
-    metadata = Column(JSONB, nullable=True)
+    activity_metadata = Column(JSONB, nullable=True)  # Renamed from metadata - reserved name
     ip_address = Column(INET, nullable=True)
     user_agent = Column(Text, nullable=True)
     
     # Relationships
-    user: "User" = relationship("User")
+    user: Mapped["User"] = relationship("User")
     
     def __repr__(self) -> str:
         return f"<UserActivity {self.activity_type}>"
@@ -79,8 +79,8 @@ class UserAchievement(Base, UUIDMixin):
     earned_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     
     # Relationships
-    user: "User" = relationship("User")
-    achievement: "Achievement" = relationship("Achievement")
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
+    achievement: Mapped["Achievement"] = relationship("Achievement", foreign_keys=[achievement_id])
     
     def __repr__(self) -> str:
         return f"<UserAchievement {self.user_id} earned {self.achievement_id}>"
@@ -122,8 +122,8 @@ class FeedEntry(Base, UUIDMixin, TimestampMixin):
     score = Column(Float, default=0, nullable=False)
     
     # Relationships
-    user: "User" = relationship("User", foreign_keys=[user_id])
-    source_user: "User" = relationship("User", foreign_keys=[source_user_id])
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
+    source_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[source_user_id])
     
     def __repr__(self) -> str:
         return f"<FeedEntry {self.id}>"

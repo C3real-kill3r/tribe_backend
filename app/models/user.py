@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import INET, JSONB, UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel, TimestampMixin, UUIDMixin
 from app.db.session import Base
@@ -53,23 +53,23 @@ class User(BaseModel):
     last_seen_at = Column(DateTime(timezone=True), nullable=True, index=True)
     
     # Relationships
-    refresh_tokens: List["RefreshToken"] = relationship(
+    refresh_tokens: Mapped[List["RefreshToken"]] = relationship(
         "RefreshToken",
         back_populates="user",
         cascade="all, delete-orphan"
     )
-    goals_created: List["Goal"] = relationship(
+    goals_created: Mapped[List["Goal"]] = relationship(
         "Goal",
         back_populates="creator",
         foreign_keys="Goal.creator_id",
         cascade="all, delete-orphan"
     )
-    goal_participations: List["GoalParticipant"] = relationship(
+    goal_participations: Mapped[List["GoalParticipant"]] = relationship(
         "GoalParticipant",
         back_populates="user",
         cascade="all, delete-orphan"
     )
-    posts: List["Post"] = relationship(
+    posts: Mapped[List["Post"]] = relationship(
         "Post",
         back_populates="user",
         cascade="all, delete-orphan"
@@ -97,7 +97,7 @@ class RefreshToken(Base, UUIDMixin, TimestampMixin):
     revoked = Column(Boolean, default=False, nullable=False)
     
     # Relationships
-    user: "User" = relationship("User", back_populates="refresh_tokens")
+    user: Mapped["User"] = relationship("User", back_populates="refresh_tokens")
     
     def __repr__(self) -> str:
         return f"<RefreshToken {self.id}>"
@@ -119,7 +119,7 @@ class PasswordResetToken(Base, UUIDMixin, TimestampMixin):
     used = Column(Boolean, default=False, nullable=False)
     
     # Relationships
-    user: "User" = relationship("User")
+    user: Mapped["User"] = relationship("User")
     
     def __repr__(self) -> str:
         return f"<PasswordResetToken {self.id}>"
@@ -140,7 +140,7 @@ class EmailVerificationToken(Base, UUIDMixin, TimestampMixin):
     verified = Column(Boolean, default=False, nullable=False)
     
     # Relationships
-    user: "User" = relationship("User")
+    user: Mapped["User"] = relationship("User")
     
     def __repr__(self) -> str:
         return f"<EmailVerificationToken {self.id}>"

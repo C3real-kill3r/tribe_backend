@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, String, Text, CheckConstraint
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, relationship
 
 from app.models.base import BaseModel, TimestampMixin, UUIDMixin
 from app.db.session import Base
@@ -46,12 +46,12 @@ class Friendship(Base, UUIDMixin):
     )
     
     # Relationships
-    user: "User" = relationship(
+    user: Mapped["User"] = relationship(
         "User",
         foreign_keys=[user_id],
         backref="friendships_initiated"
     )
-    friend: "User" = relationship(
+    friend: Mapped["User"] = relationship(
         "User",
         foreign_keys=[friend_id],
         backref="friendships_received"
@@ -82,12 +82,12 @@ class FriendSuggestion(Base, UUIDMixin, TimestampMixin):
     dismissed = Column(Boolean, default=False, nullable=False)
     
     # Relationships
-    user: "User" = relationship(
+    user: Mapped["User"] = relationship(
         "User",
         foreign_keys=[user_id],
         backref="friend_suggestions"
     )
-    suggested_user: "User" = relationship(
+    suggested_user: Mapped["User"] = relationship(
         "User",
         foreign_keys=[suggested_user_id],
         backref="suggested_to"
@@ -119,12 +119,12 @@ class AccountabilityPartner(Base, UUIDMixin):
     ended_at = Column(DateTime(timezone=True), nullable=True)
     
     # Relationships
-    user: "User" = relationship(
+    user: Mapped["User"] = relationship(
         "User",
         foreign_keys=[user_id],
         backref="accountability_as_user"
     )
-    partner: "User" = relationship(
+    partner: Mapped["User"] = relationship(
         "User",
         foreign_keys=[partner_id],
         backref="accountability_as_partner"

@@ -34,7 +34,7 @@ class GoalPreview(TribeBaseModel):
     title: str
 
 
-class PostResponse(TribeBaseModel, TimeAgoMixin):
+class PostResponse(TimeAgoMixin):  # TimeAgoMixin already inherits from TribeBaseModel
     """Post response schema."""
     
     id: UUID
@@ -71,7 +71,7 @@ class CommentUpdate(BaseModel):
     content: str = Field(..., min_length=1, max_length=1000)
 
 
-class CommentResponse(TribeBaseModel, TimeAgoMixin):
+class CommentResponse(TimeAgoMixin):  # TimeAgoMixin already inherits from TribeBaseModel
     """Comment response schema."""
     
     id: UUID

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, relationship
 
 from app.models.base import BaseModel, TimestampMixin, UUIDMixin
 from app.db.session import Base
@@ -59,14 +59,14 @@ class Post(BaseModel):
     is_archived = Column(Boolean, default=False, nullable=False)
     
     # Relationships
-    user: "User" = relationship("User", back_populates="posts")
-    goal: Optional["Goal"] = relationship("Goal", back_populates="posts")
-    likes: List["PostLike"] = relationship(
+    user: Mapped["User"] = relationship("User", back_populates="posts")
+    goal: Mapped[Optional["Goal"]] = relationship("Goal", back_populates="posts")
+    likes: Mapped[List["PostLike"]] = relationship(
         "PostLike",
         back_populates="post",
         cascade="all, delete-orphan"
     )
-    comments: List["PostComment"] = relationship(
+    comments: Mapped[List["PostComment"]] = relationship(
         "PostComment",
         back_populates="post",
         cascade="all, delete-orphan"
@@ -98,8 +98,8 @@ class Story(BaseModel):
     expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
     
     # Relationships
-    user: "User" = relationship("User")
-    views: List["StoryView"] = relationship(
+    user: Mapped["User"] = relationship("User")
+    views: Mapped[List["StoryView"]] = relationship(
         "StoryView",
         back_populates="story",
         cascade="all, delete-orphan"
@@ -128,8 +128,8 @@ class StoryView(Base, UUIDMixin):
     viewed_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     
     # Relationships
-    story: "Story" = relationship("Story", back_populates="views")
-    viewer: "User" = relationship("User")
+    story: Mapped["Story"] = relationship("Story", back_populates="views")
+    viewer: Mapped["User"] = relationship("User")
     
     def __repr__(self) -> str:
         return f"<StoryView {self.story_id} by {self.viewer_id}>"
@@ -154,8 +154,8 @@ class PostLike(Base, UUIDMixin, TimestampMixin):
     )
     
     # Relationships
-    post: "Post" = relationship("Post", back_populates="likes")
-    user: "User" = relationship("User")
+    post: Mapped["Post"] = relationship("Post", back_populates="likes")
+    user: Mapped["User"] = relationship("User")
     
     def __repr__(self) -> str:
         return f"<PostLike {self.post_id} by {self.user_id}>"
@@ -190,14 +190,14 @@ class PostComment(BaseModel):
     likes_count = Column(Integer, default=0, nullable=False)
     
     # Relationships
-    post: "Post" = relationship("Post", back_populates="comments")
-    user: "User" = relationship("User")
-    parent_comment: Optional["PostComment"] = relationship(
+    post: Mapped["Post"] = relationship("Post", back_populates="comments")
+    user: Mapped["User"] = relationship("User")
+    parent_comment: Mapped[Optional["PostComment"]] = relationship(
         "PostComment",
         remote_side="PostComment.id",
         backref="replies"
     )
-    likes: List["CommentLike"] = relationship(
+    likes: Mapped[List["CommentLike"]] = relationship(
         "CommentLike",
         back_populates="comment",
         cascade="all, delete-orphan"
@@ -225,8 +225,8 @@ class CommentLike(Base, UUIDMixin, TimestampMixin):
     )
     
     # Relationships
-    comment: "PostComment" = relationship("PostComment", back_populates="likes")
-    user: "User" = relationship("User")
+    comment: Mapped["PostComment"] = relationship("PostComment", back_populates="likes")
+    user: Mapped["User"] = relationship("User")
     
     def __repr__(self) -> str:
         return f"<CommentLike {self.comment_id} by {self.user_id}>"

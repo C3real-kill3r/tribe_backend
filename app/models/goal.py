@@ -9,7 +9,7 @@ from sqlalchemy import (
     Numeric, String, Text
 )
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, relationship
 
 from app.models.base import BaseModel, TimestampMixin, UUIDMixin
 from app.db.session import Base
@@ -55,28 +55,28 @@ class Goal(BaseModel):
     completed_at = Column(DateTime(timezone=True), nullable=True)
     
     # Relationships
-    creator: "User" = relationship("User", back_populates="goals_created")
-    participants: List["GoalParticipant"] = relationship(
+    creator: Mapped["User"] = relationship("User", back_populates="goals_created")
+    participants: Mapped[List["GoalParticipant"]] = relationship(
         "GoalParticipant",
         back_populates="goal",
         cascade="all, delete-orphan"
     )
-    contributions: List["GoalContribution"] = relationship(
+    contributions: Mapped[List["GoalContribution"]] = relationship(
         "GoalContribution",
         back_populates="goal",
         cascade="all, delete-orphan"
     )
-    milestones: List["GoalMilestone"] = relationship(
+    milestones: Mapped[List["GoalMilestone"]] = relationship(
         "GoalMilestone",
         back_populates="goal",
         cascade="all, delete-orphan"
     )
-    reminders: List["GoalReminder"] = relationship(
+    reminders: Mapped[List["GoalReminder"]] = relationship(
         "GoalReminder",
         back_populates="goal",
         cascade="all, delete-orphan"
     )
-    posts: List["Post"] = relationship("Post", back_populates="goal")
+    posts: Mapped[List["Post"]] = relationship("Post", back_populates="goal")
     
     def __repr__(self) -> str:
         return f"<Goal {self.title}>"
@@ -105,8 +105,8 @@ class GoalParticipant(Base, UUIDMixin):
     left_at = Column(DateTime(timezone=True), nullable=True)
     
     # Relationships
-    goal: "Goal" = relationship("Goal", back_populates="participants")
-    user: "User" = relationship("User", back_populates="goal_participations")
+    goal: Mapped["Goal"] = relationship("Goal", back_populates="participants")
+    user: Mapped["User"] = relationship("User", back_populates="goal_participations")
     
     def __repr__(self) -> str:
         return f"<GoalParticipant {self.user_id} in {self.goal_id}>"
@@ -138,8 +138,8 @@ class GoalContribution(Base, UUIDMixin, TimestampMixin):
     )  # 'monetary', 'milestone', 'checkin'
     
     # Relationships
-    goal: "Goal" = relationship("Goal", back_populates="contributions")
-    user: "User" = relationship("User")
+    goal: Mapped["Goal"] = relationship("Goal", back_populates="contributions")
+    user: Mapped["User"] = relationship("User")
     
     def __repr__(self) -> str:
         return f"<GoalContribution {self.amount} to {self.goal_id}>"
@@ -169,8 +169,8 @@ class GoalMilestone(Base, UUIDMixin, TimestampMixin):
     order_index = Column(Integer, nullable=True)
     
     # Relationships
-    goal: "Goal" = relationship("Goal", back_populates="milestones")
-    achiever: "User" = relationship("User")
+    goal: Mapped["Goal"] = relationship("Goal", back_populates="milestones")
+    achiever: Mapped[Optional["User"]] = relationship("User")
     
     def __repr__(self) -> str:
         return f"<GoalMilestone {self.title}>"
@@ -198,8 +198,8 @@ class GoalReminder(Base, UUIDMixin, TimestampMixin):
     is_active = Column(Boolean, default=True, nullable=False)
     
     # Relationships
-    goal: "Goal" = relationship("Goal", back_populates="reminders")
-    user: "User" = relationship("User")
+    goal: Mapped["Goal"] = relationship("Goal", back_populates="reminders")
+    user: Mapped["User"] = relationship("User")
     
     def __repr__(self) -> str:
         return f"<GoalReminder {self.id}>"
