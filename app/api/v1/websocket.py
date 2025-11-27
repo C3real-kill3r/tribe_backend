@@ -2,6 +2,7 @@
 WebSocket endpoint for real-time chat and notifications.
 """
 import json
+import logging
 from typing import Dict, Set
 from uuid import UUID
 
@@ -15,6 +16,8 @@ from app.db.session import AsyncSessionLocal
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -57,8 +60,9 @@ class ConnectionManager:
         """Send a message to a specific WebSocket."""
         try:
             await websocket.send_text(json.dumps(message))
-        except Exception:
-            pass  # Connection may be closed
+        except Exception as e:
+            logger.warning(f"Failed to send WebSocket message: {e}")
+            # Connection may be closed
 
     async def send_to_user(self, user_id: UUID, message: dict):
         """Send a message to a specific user."""
@@ -126,110 +130,189 @@ async def websocket_endpoint(
     db: AsyncSession = None
     
     try:
+        logger.info(f"WebSocket connection attempt from client")
+        
         # Get database session
         db = AsyncSessionLocal()
         
         # Authenticate user from token
-        user = await get_current_user_from_token(token, db)
-        if not user:
+        try:
+            user = await get_current_user_from_token(token, db)
+            if not user:
+                logger.warning("WebSocket connection rejected: Invalid token")
+                await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+                if db:
+                    await db.close()
+                return
+        except Exception as e:
+            logger.error(f"WebSocket authentication error: {e}")
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             if db:
                 await db.close()
             return
         
+        logger.info(f"WebSocket connection authenticated for user {user.id}")
+        
+        # Update user's last_seen_at to mark as online
+        from datetime import datetime
+        try:
+            user.last_seen_at = datetime.utcnow()
+            db.add(user)
+            await db.commit()
+        except Exception as e:
+            logger.warning(f"Failed to update last_seen_at: {e}")
+            await db.rollback()
+        
         # Connect the user
-        await manager.connect(websocket, user.id)
+        try:
+            await manager.connect(websocket, user.id)
+            logger.info(f"WebSocket connected for user {user.id}")
+        except Exception as e:
+            logger.error(f"Failed to connect WebSocket: {e}")
+            if db:
+                await db.close()
+            return
         
         # Main message loop
-        while True:
-            data = await websocket.receive_text()
-            message = json.loads(data)
-            event = message.get("event")
-            
-            if event == "subscribe":
-                # Subscribe to a conversation
-                conversation_id_str = message.get("conversation_id")
-                if conversation_id_str:
-                    try:
-                        conversation_id = UUID(conversation_id_str)
-                        # Verify user is a participant
-                        result = await db.execute(
-                            select(Conversation)
-                            .where(Conversation.id == conversation_id)
-                            .options(selectinload(Conversation.participants))
-                        )
-                        conversation = result.scalar_one_or_none()
-                        
-                        if conversation:
-                            is_participant = any(
-                                p.user_id == user.id and p.left_at is None
-                                for p in conversation.participants
-                            )
-                            if is_participant:
-                                await manager.subscribe_to_conversation(conversation_id, user.id)
-                                await manager.send_personal_message({
-                                    "event": "subscribed",
-                                    "conversation_id": conversation_id_str
-                                }, websocket)
-                    except (ValueError, AttributeError):
+        try:
+            while True:
+                try:
+                    data = await websocket.receive_text()
+                    message = json.loads(data)
+                    event = message.get("event")
+                    
+                    logger.debug(f"Received WebSocket event '{event}' from user {user.id}")
+                    
+                    if event == "subscribe":
+                        # Subscribe to a conversation
+                        conversation_id_str = message.get("conversation_id")
+                        if conversation_id_str:
+                            try:
+                                conversation_id = UUID(conversation_id_str)
+                                # Verify user is a participant
+                                result = await db.execute(
+                                    select(Conversation)
+                                    .where(Conversation.id == conversation_id)
+                                    .options(selectinload(Conversation.participants))
+                                )
+                                conversation = result.scalar_one_or_none()
+                                
+                                if conversation:
+                                    is_participant = any(
+                                        p.user_id == user.id and p.left_at is None
+                                        for p in conversation.participants
+                                    )
+                                    if is_participant:
+                                        await manager.subscribe_to_conversation(conversation_id, user.id)
+                                        logger.info(f"User {user.id} subscribed to conversation {conversation_id}")
+                                        await manager.send_personal_message({
+                                            "event": "subscribed",
+                                            "conversation_id": conversation_id_str
+                                        }, websocket)
+                                    else:
+                                        logger.warning(f"User {user.id} attempted to subscribe to conversation {conversation_id} but is not a participant")
+                                else:
+                                    logger.warning(f"Conversation {conversation_id} not found for subscription")
+                            except (ValueError, AttributeError) as e:
+                                logger.warning(f"Invalid conversation_id in subscribe event: {e}")
+                    
+                    elif event == "unsubscribe":
+                        # Unsubscribe from a conversation
+                        conversation_id_str = message.get("conversation_id")
+                        if conversation_id_str:
+                            try:
+                                conversation_id = UUID(conversation_id_str)
+                                await manager.unsubscribe_from_conversation(conversation_id, user.id)
+                                logger.info(f"User {user.id} unsubscribed from conversation {conversation_id}")
+                            except ValueError as e:
+                                logger.warning(f"Invalid conversation_id in unsubscribe event: {e}")
+                    
+                    elif event == "typing":
+                        # Handle typing indicator
+                        conversation_id_str = message.get("conversation_id")
+                        is_typing = message.get("is_typing", False)
+                        if conversation_id_str:
+                            try:
+                                conversation_id = UUID(conversation_id_str)
+                                await manager.handle_typing(
+                                    conversation_id,
+                                    user.id,
+                                    user.full_name or user.username,
+                                    is_typing
+                                )
+                            except ValueError as e:
+                                logger.warning(f"Invalid conversation_id in typing event: {e}")
+                    
+                    elif event == "presence":
+                        # Handle presence updates (online/offline)
+                        presence_status = message.get("status", "online")
+                        # Update last_seen_at when user sends presence update
+                        if presence_status == "online":
+                            try:
+                                user.last_seen_at = datetime.utcnow()
+                                await db.commit()
+                            except Exception as e:
+                                logger.warning(f"Failed to update last_seen_at: {e}")
+                                await db.rollback()
+                        # Could broadcast to friends or conversations
                         pass
-            
-            elif event == "unsubscribe":
-                # Unsubscribe from a conversation
-                conversation_id_str = message.get("conversation_id")
-                if conversation_id_str:
-                    try:
-                        conversation_id = UUID(conversation_id_str)
-                        await manager.unsubscribe_from_conversation(conversation_id, user.id)
-                    except ValueError:
-                        pass
-            
-            elif event == "typing":
-                # Handle typing indicator
-                conversation_id_str = message.get("conversation_id")
-                is_typing = message.get("is_typing", False)
-                if conversation_id_str:
-                    try:
-                        conversation_id = UUID(conversation_id_str)
-                        await manager.handle_typing(
-                            conversation_id,
-                            user.id,
-                            user.full_name or user.username,
-                            is_typing
-                        )
-                    except ValueError:
-                        pass
-            
-            elif event == "presence":
-                # Handle presence updates (online/offline)
-                status = message.get("status", "online")
-                # Could broadcast to friends or conversations
-                pass
-            
-            elif event == "ping":
-                # Respond to heartbeat
-                await manager.send_personal_message({
-                    "event": "pong"
-                }, websocket)
+                    
+                    elif event == "ping":
+                        # Respond to heartbeat
+                        await manager.send_personal_message({
+                            "event": "pong"
+                        }, websocket)
+                
+                except WebSocketDisconnect:
+                    # Re-raise WebSocketDisconnect to be handled by outer handler
+                    raise
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Invalid JSON received from user {user.id}: {e}")
+                    continue
+                except Exception as e:
+                    logger.error(f"Error processing WebSocket message from user {user.id}: {e}")
+                    # Check if this is a disconnect-related error
+                    error_msg = str(e).lower()
+                    if "disconnect" in error_msg or "receive" in error_msg:
+                        logger.warning(f"WebSocket connection appears to be closed, breaking loop")
+                        break
+                    continue
+        except WebSocketDisconnect:
+            # Re-raise to be handled by outer handler
+            raise
+        except Exception as e:
+            logger.error(f"Error in WebSocket message loop: {e}")
+            raise
     
-    except WebSocketDisconnect:
+    except WebSocketDisconnect as e:
+        logger.info(f"WebSocket disconnected for user {user.id if user else 'unknown'}: code={e.code}, reason={e.reason}")
         if user:
             manager.disconnect(user.id)
         if db:
-            await db.close()
+            try:
+                await db.close()
+            except Exception:
+                pass
     except Exception as e:
+        logger.error(f"Unexpected error in WebSocket endpoint: {e}", exc_info=True)
         if user:
             manager.disconnect(user.id)
         if db:
-            await db.close()
-        await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
+            try:
+                await db.close()
+            except Exception:
+                pass
+        try:
+            await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
+        except Exception:
+            pass
 
 
 async def broadcast_new_message(conversation_id: UUID, message_data: dict, exclude_user_id: UUID = None):
     """Helper function to broadcast a new message to conversation subscribers."""
+    logger.info(f"Broadcasting message to conversation {conversation_id}, excluding user {exclude_user_id}")
     await manager.broadcast_to_conversation(conversation_id, {
         "event": "message.new",
         "conversation_id": str(conversation_id),
         "data": message_data
     }, exclude_user_id=exclude_user_id)
-

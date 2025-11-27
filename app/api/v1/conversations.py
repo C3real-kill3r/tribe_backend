@@ -88,12 +88,20 @@ async def get_conversations(
         current_user_participant = None
         for p in conv.participants:
             if p.user:
+                # Calculate online status (online if last_seen_at is within 5 minutes)
+                is_online = False
+                if p.user.last_seen_at:
+                    time_since_seen = datetime.utcnow() - p.user.last_seen_at.replace(tzinfo=None)
+                    is_online = time_since_seen.total_seconds() < 300  # 5 minutes
+                
                 participants.append(ParticipantInfo(
                     user_id=p.user.id,
                     username=p.user.username,
                     full_name=p.user.full_name,
                     profile_image_url=p.user.profile_image_url,
                     role=p.role,
+                    is_online=is_online if p.user.online_status_visible else None,
+                    last_seen_at=p.user.last_seen_at if p.user.online_status_visible else None,
                 ))
                 if p.user_id == current_user.id:
                     current_user_participant = p
@@ -261,12 +269,20 @@ async def get_conversation(
     current_user_participant = None
     for p in conversation.participants:
         if p.user:
+            # Calculate online status (online if last_seen_at is within 5 minutes)
+            is_online = False
+            if p.user.last_seen_at:
+                time_since_seen = datetime.utcnow() - p.user.last_seen_at.replace(tzinfo=None)
+                is_online = time_since_seen.total_seconds() < 300  # 5 minutes
+            
             participants.append(ParticipantInfo(
                 user_id=p.user.id,
                 username=p.user.username,
                 full_name=p.user.full_name,
                 profile_image_url=p.user.profile_image_url,
                 role=p.role,
+                is_online=is_online if p.user.online_status_visible else None,
+                last_seen_at=p.user.last_seen_at if p.user.online_status_visible else None,
             ))
             if p.user_id == current_user.id:
                 current_user_participant = p

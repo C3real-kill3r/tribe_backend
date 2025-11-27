@@ -34,6 +34,8 @@ class ParticipantInfo(TribeBaseModel):
     full_name: str
     profile_image_url: Optional[str] = None
     role: str = "member"
+    is_online: Optional[bool] = None
+    last_seen_at: Optional[datetime] = None
 
 
 class LastMessagePreview(TribeBaseModel):
