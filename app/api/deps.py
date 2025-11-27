@@ -157,3 +157,46 @@ async def get_current_active_user(
         )
     return current_user
 
+
+async def get_current_user_from_token(token: str, db: AsyncSession) -> Optional[User]:
+    """
+    Get current authenticated user from JWT token string.
+    Used for WebSocket authentication.
+    
+    Args:
+        token: JWT token string
+        db: Database session
+    
+    Returns:
+        User or None: Current authenticated user or None if invalid
+    """
+    try:
+        payload = decode_token(token)
+        
+        if not payload:
+            return None
+        
+        # Check token type
+        if payload.get("type") != "access":
+            return None
+        
+        user_id = payload.get("sub")
+        if not user_id:
+            return None
+        
+        try:
+            user_uuid = UUID(user_id)
+        except ValueError:
+            return None
+        
+        # Get user from database
+        result = await db.execute(select(User).where(User.id == user_uuid))
+        user = result.scalar_one_or_none()
+        
+        if not user or not user.is_active:
+            return None
+        
+        return user
+    except Exception:
+        return None
+

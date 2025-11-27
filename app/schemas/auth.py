@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from app.schemas.common import TribeBaseModel
 
@@ -13,7 +13,7 @@ from app.schemas.common import TribeBaseModel
 class UserCreate(BaseModel):
     """Schema for user registration."""
     
-    email: EmailStr
+    email: str = Field(..., pattern=r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.test$')
     username: str = Field(..., min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_]+$")
     full_name: str = Field(..., min_length=1, max_length=255)
     password: str = Field(..., min_length=8, max_length=128)
@@ -43,7 +43,7 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     """Schema for user login."""
     
-    email: EmailStr
+    email: str = Field(..., pattern=r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.test$')
     password: str = Field(..., min_length=1)
     device_info: Optional[dict] = None
 
@@ -101,7 +101,7 @@ class AccessTokenResponse(TribeBaseModel):
 class PasswordResetRequest(BaseModel):
     """Schema for password reset request."""
     
-    email: EmailStr
+    email: str = Field(..., pattern=r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.test$')
 
 
 class PasswordResetConfirm(BaseModel):

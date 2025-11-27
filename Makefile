@@ -1,4 +1,4 @@
-.PHONY: help install run dev test clean migrate migrate-up migrate-down docker-up docker-down docker-build
+.PHONY: help install run dev test clean migrate migrate-up migrate-down docker-up docker-down docker-build seed
 
 # Default target
 help:
@@ -15,6 +15,7 @@ help:
 	@echo "  make docker-up    - Start Docker services"
 	@echo "  make docker-down  - Stop Docker services"
 	@echo "  make docker-build - Build Docker images"
+	@echo "  make seed         - Seed database with test data"
 	@echo ""
 
 # Install dependencies
@@ -87,4 +88,9 @@ format:
 lint:
 	@echo "Linting code..."
 	. venv/bin/activate && flake8 app/ tests/ || echo "flake8 not installed, skipping..."
+
+# Seed database
+seed:
+	@echo "Seeding database with test data..."
+	. venv/bin/activate && python scripts/seed_data.py
 

@@ -16,7 +16,7 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = Field(None, min_length=1, max_length=255)
     username: Optional[str] = Field(None, min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_]+$")
     bio: Optional[str] = Field(None, max_length=500)
-    email: Optional[EmailStr] = None
+    email: Optional[str] = Field(None, pattern=r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.test$')
 
 
 class UserProfileResponse(TribeBaseModel):

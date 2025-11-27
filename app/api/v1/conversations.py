@@ -464,6 +464,23 @@ async def send_message(
     await db.commit()
     await db.refresh(message)
     
+    # Broadcast new message via WebSocket
+    from app.api.v1.websocket import broadcast_new_message
+    message_data = {
+        "id": str(message.id),
+        "conversation_id": str(message.conversation_id),
+        "sender": {
+            "id": str(current_user.id),
+            "username": current_user.username,
+            "full_name": current_user.full_name,
+            "profile_image_url": current_user.profile_image_url
+        },
+        "content": message.content,
+        "message_type": message.message_type,
+        "created_at": message.created_at.isoformat()
+    }
+    await broadcast_new_message(conversation_id, message_data, exclude_user_id=current_user.id)
+    
     return MessageResponse(
         id=message.id,
         conversation_id=message.conversation_id,
