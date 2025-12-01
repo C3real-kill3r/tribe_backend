@@ -31,22 +31,39 @@ async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.app_name} API...")
     logger.info(f"Environment: {settings.app_env}, Debug: {settings.debug}")
     
+    # Log database configuration (masked)
+    from app.db.session import _mask_database_url
+    masked_db_url = _mask_database_url(settings.database_url_async)
+    logger.info(f"Database URL: {masked_db_url}")
+    
+    # Extract and log host/port for diagnostics
+    try:
+        if "@" in settings.database_url and ":" in settings.database_url.split("@")[1]:
+            host_port = settings.database_url.split("@")[1].split("/")[0]
+            logger.info(f"Database host/port: {host_port}")
+    except Exception:
+        pass  # Don't fail if URL parsing fails
+    
     # Initialize database (create tables if they don't exist)
     # In production, use Alembic migrations instead
-    # Always try to initialize database to ensure connection works
+    # Try to initialize database, but don't fail startup if it's not available
+    # This allows the app to start even if DB is temporarily unavailable
     try:
         await init_db()
+        logger.info("Database initialized successfully")
     except Exception as e:
         logger.error(f"Failed to initialize database: {str(e)}")
-        # In production, we might want to continue anyway if using migrations
-        # But for now, we'll raise to fail fast if DB is not available
-        if not settings.debug:
-            logger.warning(
-                "Database initialization failed. If using Alembic migrations, "
-                "ensure migrations are run separately. Continuing startup..."
-            )
-        else:
-            raise
+        logger.warning(
+            "Application will start, but database operations may fail. "
+            "Please ensure:"
+            "\n  1. DATABASE_URL environment variable is set correctly"
+            "\n  2. Database service is running and accessible"
+            "\n  3. Network connectivity between services is configured"
+            "\n  4. If using Alembic migrations, ensure they are run separately"
+        )
+        # Don't raise - allow app to start and handle DB errors gracefully
+        # The first API request will fail if DB is still unavailable, but at least
+        # the app will be running and can recover when DB becomes available
     
     yield
     
@@ -121,14 +138,35 @@ app.include_router(api_router, prefix="/api")
 # Health check endpoint
 @app.get("/health", tags=["Health"])
 async def health_check():
-    """Health check endpoint for load balancers and monitoring."""
-    return {
+    """
+    Health check endpoint for load balancers and monitoring.
+    Includes database connectivity status.
+    """
+    from sqlalchemy import text
+    from app.db.session import engine, _mask_database_url
+    
+    health_status = {
         "status": "healthy",
         "app": settings.app_name,
         "version": "1.0.0",
         "environment": settings.app_env,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.utcnow().isoformat(),
+        "database": {
+            "connected": False,
+            "url": _mask_database_url(settings.database_url_async)
+        }
     }
+    
+    # Test database connection
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text("SELECT 1"))
+        health_status["database"]["connected"] = True
+    except Exception as e:
+        health_status["database"]["error"] = str(e)
+        health_status["status"] = "degraded"  # App is running but DB is not available
+    
+    return health_status
 
 
 # Root endpoint

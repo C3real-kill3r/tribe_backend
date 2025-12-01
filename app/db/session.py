@@ -33,7 +33,19 @@ def _mask_database_url(url: str) -> str:
 # Create async engine with connection pooling
 # Use database_url_async to ensure asyncpg driver is used
 database_url = settings.database_url_async
-logger.info(f"Connecting to database: {_mask_database_url(database_url)}")
+
+# Log database connection info at module level (will be logged when module is imported)
+# Note: This happens before logging is fully configured, so we'll also log in init_db
+try:
+    masked_url = _mask_database_url(database_url)
+    # Extract host and port for diagnostics
+    if "@" in database_url and ":" in database_url.split("@")[1]:
+        host_port = database_url.split("@")[1].split("/")[0]
+        logger.info(f"Database configuration: {masked_url}")
+        logger.info(f"Database host/port: {host_port}")
+except Exception:
+    # If URL parsing fails, just log the masked URL
+    logger.info(f"Database URL configured (masked for security)")
 
 engine = create_async_engine(
     database_url,
@@ -90,6 +102,10 @@ async def init_db() -> None:
     """
     max_retries = 5
     base_delay = 2  # seconds
+    
+    # Log database URL info for diagnostics
+    masked_url = _mask_database_url(settings.database_url_async)
+    logger.info(f"Database URL: {masked_url}")
     
     for attempt in range(max_retries):
         try:
