@@ -1,6 +1,7 @@
 """
 Main FastAPI application entry point.
 """
+import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -13,6 +14,13 @@ from app.core.config import settings
 from app.api.router import api_router
 from app.db.session import init_db, close_db
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO if not settings.debug else logging.DEBUG,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -20,16 +28,30 @@ async def lifespan(app: FastAPI):
     Application lifespan handler for startup and shutdown events.
     """
     # Startup
-    print(f"Starting {settings.app_name} API...")
+    logger.info(f"Starting {settings.app_name} API...")
+    logger.info(f"Environment: {settings.app_env}, Debug: {settings.debug}")
+    
     # Initialize database (create tables if they don't exist)
     # In production, use Alembic migrations instead
-    if settings.debug:
+    # Always try to initialize database to ensure connection works
+    try:
         await init_db()
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {str(e)}")
+        # In production, we might want to continue anyway if using migrations
+        # But for now, we'll raise to fail fast if DB is not available
+        if not settings.debug:
+            logger.warning(
+                "Database initialization failed. If using Alembic migrations, "
+                "ensure migrations are run separately. Continuing startup..."
+            )
+        else:
+            raise
     
     yield
     
     # Shutdown
-    print(f"Shutting down {settings.app_name} API...")
+    logger.info(f"Shutting down {settings.app_name} API...")
     await close_db()
 
 

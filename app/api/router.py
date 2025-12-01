@@ -3,7 +3,7 @@ Main API router that includes all endpoint routers.
 """
 from fastapi import APIRouter
 
-from app.api.v1 import auth, users, friends, goals, posts, stories, conversations, ai_coach, notifications, settings, search, websocket
+from app.api.v1 import auth, users, friends, goals, posts, stories, conversations, ai_coach, notifications, settings, search, websocket, admin
 
 api_router = APIRouter()
 
@@ -67,5 +67,10 @@ api_router.include_router(
     websocket.router,
     prefix="/v1",
     tags=["WebSocket"]
+)
+api_router.include_router(
+    admin.router,
+    prefix="/v1/admin",
+    tags=["Admin"]
 )
 

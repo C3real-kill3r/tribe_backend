@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://tribe_user:tribe_password@localhost:5432/tribe_db"
     db_pool_size: int = 20
     db_max_overflow: int = 10
+    db_connect_timeout: int = 10  # Connection timeout in seconds
     
     # Redis
     redis_url: str = "redis://localhost:6379/0"
@@ -87,6 +88,28 @@ class Settings(BaseSettings):
     def cors_origins(self) -> List[str]:
         """Parse CORS origins from comma-separated string."""
         return [origin.strip() for origin in self.allowed_origins.split(",")]
+    
+    @property
+    def database_url_async(self) -> str:
+        """
+        Get database URL with asyncpg driver.
+        Converts postgresql:// URLs to postgresql+asyncpg:// if needed.
+        This is useful for platforms like Render that provide postgresql:// URLs.
+        """
+        url = self.database_url
+        # Convert postgresql:// to postgresql+asyncpg:// if not already asyncpg
+        if url.startswith("postgresql://") and "+asyncpg" not in url:
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        # Ensure asyncpg driver is present
+        elif not url.startswith("postgresql+asyncpg://"):
+            # If it's already postgresql+asyncpg://, keep it as is
+            if not url.startswith("postgresql+"):
+                # Fallback: assume it needs asyncpg
+                if "://" in url:
+                    parts = url.split("://", 1)
+                    if parts[0] == "postgresql":
+                        url = "postgresql+asyncpg://" + parts[1]
+        return url
     
     @property
     def is_production(self) -> bool:
