@@ -50,9 +50,25 @@ class Settings(BaseSettings):
     s3_bucket: str = "tribe-app-media"
     cloudfront_domain: Optional[str] = None
     
+    # LLM Provider Configuration
+    llm_provider: str = "openai"  # 'openai', 'anthropic', or 'gemini'
+    
     # OpenAI
     openai_api_key: Optional[str] = None
-    openai_model: str = "gpt-4-turbo-preview"
+    openai_model: str = "gpt-4o-mini"
+    
+    # Anthropic (Claude)
+    anthropic_api_key: Optional[str] = None
+    anthropic_model: str = "claude-3-5-sonnet-20241022"
+    
+    # Google Gemini
+    gemini_api_key: Optional[str] = None
+    gemini_model: str = "gemini-pro"
+    
+    # AI Coach Settings
+    ai_coach_temperature: float = 0.7
+    ai_coach_max_tokens: int = 2000
+    ai_coach_context_window: int = 20  # Number of recent messages to include in context
     
     # Firebase
     firebase_credentials_path: Optional[str] = None
@@ -82,6 +98,12 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Get cached settings instance."""
     return Settings()
+
+
+def reload_settings() -> Settings:
+    """Reload settings (clears cache and reloads from environment)."""
+    get_settings.cache_clear()
+    return get_settings()
 
 
 settings = get_settings()

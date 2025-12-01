@@ -1,0 +1,53 @@
+# Environment files (loaded at runtime via docker-compose, not copied into image)
+.env
+.env.local
+.env.*.local
+
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.venv
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Docker
+docker-compose.yml
+.docker/
+
+# Documentation
+README.md
+*.md
+
+# Tests
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Secrets (should never be in image)
+*.pem
+*.key
+secrets/
+firebase*.json
+
